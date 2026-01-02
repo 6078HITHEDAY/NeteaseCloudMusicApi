@@ -9,6 +9,12 @@ const qs = require('url')
 const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
 const MUSIC_HOST = 'music.163.com'
 const INTERFACE3_HOST = 'interface3.music.163.com'
+const ALBUM_PATH_REGEX = /\/weapi\/v1\/album\/([^/]+)\/?$/
+const COMMENT_PATH_REGEX = /\/weapi\/v1\/resource\/comments\/R_AL_3_(\d+)/
+const LOGIN_PATH_REGEX = /\/weapi\/login\/cellphone/
+const LYRIC_PATH_REGEX = /\/api\/song\/lyric/
+const SEARCH_PATH_REGEX = /\/weapi\/search\/get/
+const SONG_URL_PATH_REGEX = /\/eapi\/song\/enhance\/player\/url/
 
 /**
  * Build a mock response shaped like the normal request answer.
@@ -32,13 +38,11 @@ const getMockAnswer = (url, data = {}) => {
   try {
     const { hostname, pathname } = new URL(url)
     if (hostname === MUSIC_HOST) {
-      const albumMatch = pathname.match(/\/weapi\/v1\/album\/([^/]+)\/?$/)
+      const albumMatch = pathname.match(ALBUM_PATH_REGEX)
       if (albumMatch) {
         return buildMockAnswer({ code: 200, album: { id: albumMatch[1] } })
       }
-      const commentMatch = pathname.match(
-        /\/weapi\/v1\/resource\/comments\/R_AL_3_(\d+)/,
-      )
+      const commentMatch = pathname.match(COMMENT_PATH_REGEX)
       if (commentMatch) {
         return buildMockAnswer({
           code: 200,
@@ -47,19 +51,19 @@ const getMockAnswer = (url, data = {}) => {
           id: commentMatch[1],
         })
       }
-      if (pathname.includes('/weapi/login/cellphone')) {
+      if (LOGIN_PATH_REGEX.test(pathname)) {
         return buildMockAnswer({
           code: 200,
           profile: { nickname: 'mock-user' },
         })
       }
-      if (pathname.includes('/api/song/lyric')) {
+      if (LYRIC_PATH_REGEX.test(pathname)) {
         return buildMockAnswer({
           code: 200,
           lrc: { lyric: '[00:00.00] mock lyric' },
         })
       }
-      if (pathname.includes('/weapi/search/get')) {
+      if (SEARCH_PATH_REGEX.test(pathname)) {
         const keyword = data.s || ''
         return buildMockAnswer({
           code: 200,
@@ -69,7 +73,7 @@ const getMockAnswer = (url, data = {}) => {
     }
     if (
       hostname === INTERFACE3_HOST &&
-      pathname.includes('/eapi/song/enhance/player/url')
+      SONG_URL_PATH_REGEX.test(pathname)
     ) {
       return buildMockAnswer({
         code: 200,
@@ -77,7 +81,7 @@ const getMockAnswer = (url, data = {}) => {
       })
     }
   } catch (e) {
-    console.warn('[mock]', { url: '[invalid]', error: e.message })
+    console.warn('[mock]', { error: e.message })
   }
   return null
 }
