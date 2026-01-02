@@ -7,6 +7,7 @@ const https = require('https')
 const tunnel = require('tunnel')
 const qs = require('url')
 const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
+const mockDebugEnabled = process.env.NCM_API_MOCK_DEBUG === 'true'
 const MUSIC_HOST = 'music.163.com'
 const INTERFACE3_HOST = 'interface3.music.163.com'
 const ALBUM_PATH_REGEX = /\/weapi\/v1\/album\/([^/]+)\/?$/
@@ -29,6 +30,10 @@ const buildMockAnswer = (body = {}) => {
   }
 }
 
+const debugMockMatch = (tag) => {
+  if (mockDebugEnabled) console.debug('[mock] returning stub for', tag)
+}
+
 /**
  * Return a mocked answer for known URLs when mock mode is enabled.
  */
@@ -40,10 +45,12 @@ const getMockAnswer = (url, data = {}) => {
     if (hostname === MUSIC_HOST) {
       const albumMatch = pathname.match(ALBUM_PATH_REGEX)
       if (albumMatch) {
+        debugMockMatch('album')
         return buildMockAnswer({ code: 200, album: { id: albumMatch[1] } })
       }
       const commentMatch = pathname.match(COMMENT_PATH_REGEX)
       if (commentMatch) {
+        debugMockMatch('comment_album')
         return buildMockAnswer({
           code: 200,
           comments: [],
@@ -52,18 +59,21 @@ const getMockAnswer = (url, data = {}) => {
         })
       }
       if (LOGIN_PATH_REGEX.test(pathname)) {
+        debugMockMatch('login_cellphone')
         return buildMockAnswer({
           code: 200,
           profile: { nickname: 'mock-user' },
         })
       }
       if (LYRIC_PATH_REGEX.test(pathname)) {
+        debugMockMatch('lyric')
         return buildMockAnswer({
           code: 200,
           lrc: { lyric: '[00:00.00] mock lyric' },
         })
       }
       if (SEARCH_PATH_REGEX.test(pathname)) {
+        debugMockMatch('search')
         const keyword = data.s || ''
         return buildMockAnswer({
           code: 200,
@@ -75,13 +85,15 @@ const getMockAnswer = (url, data = {}) => {
       hostname === INTERFACE3_HOST &&
       SONG_URL_PATH_REGEX.test(pathname)
     ) {
+      debugMockMatch('song_url')
       return buildMockAnswer({
         code: 200,
         data: [{ url: 'https://example.com/mock-song' }],
       })
     }
   } catch (e) {
-    console.warn('[mock]', { error: e.message })
+    const safeUrl = typeof url === 'string' ? url.split('?')[0] : '[invalid]'
+    console.warn('[mock]', { url: safeUrl, error: e.message })
   }
   return null
 }
