@@ -62,11 +62,11 @@ const getMockAnswer = (method, url, data = {}) => {
     ) {
       return buildMockAnswer({
         code: 200,
-        data: [{ url: 'https://mock.song/url' }],
+        data: [{ url: 'https://example.com/mock-song' }],
       })
     }
   } catch (e) {
-    console.warn('[mock] failed to parse request url', url, e.message)
+    console.warn('[mock] failed to parse request url', e.message)
   }
   return null
 }
