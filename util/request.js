@@ -97,7 +97,7 @@ const getMockAnswer = (url, data = {}) => {
   }
   return null
 }
-// request.debug = true // 开启可看到更详细信息
+// request.debug = true // enable to view more detailed information
 
 const chooseUserAgent = (ua = false) => {
   const userAgentList = {
@@ -124,7 +124,7 @@ const chooseUserAgent = (ua = false) => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.30 Safari/537.36',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/13.10586',
-      // Linux 就算了
+      // Linux (not needed here)
     ],
   }
   let realUserAgentList =
@@ -177,13 +177,13 @@ const createRequest = (method, url, data, options) => {
       const cookie = options.cookie || {}
       const csrfToken = cookie['__csrf'] || ''
       const header = {
-        osver: cookie.osver, //系统版本
-        deviceId: cookie.deviceId, //encrypt.base64.encode(imei + '\t02:00:00:00:00:00\t5106025eb79a5247\t70ffbaac7')
-        appver: cookie.appver || '8.0.0', // app版本
-        versioncode: cookie.versioncode || '140', //版本号
-        mobilename: cookie.mobilename, //设备model
+        osver: cookie.osver, // system version
+        deviceId: cookie.deviceId, // encrypt.base64.encode(imei + '\t02:00:00:00:00:00\t5106025eb79a5247\t70ffbaac7')
+        appver: cookie.appver || '8.0.0', // app version
+        versioncode: cookie.versioncode || '140', // version code
+        mobilename: cookie.mobilename, // device model
         buildver: cookie.buildver || Date.now().toString().substr(0, 10),
-        resolution: cookie.resolution || '1920x1080', //设备分辨率
+        resolution: cookie.resolution || '1920x1080', // device resolution
         __csrf: csrfToken,
         os: cookie.os || 'android',
         channel: cookie.channel,
