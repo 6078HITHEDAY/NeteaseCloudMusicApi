@@ -7,6 +7,8 @@ const https = require('https')
 const tunnel = require('tunnel')
 const qs = require('url')
 const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
+const MUSIC_HOST = 'music.163.com'
+const INTERFACE3_HOST = 'interface3.music.163.com'
 
 /**
  * Build a mock response shaped like the normal request answer.
@@ -29,7 +31,7 @@ const getMockAnswer = (url, data = {}) => {
   if (typeof url !== 'string') return null
   try {
     const { hostname, pathname } = new URL(url)
-    if (hostname === 'music.163.com') {
+    if (hostname === MUSIC_HOST) {
       const albumMatch = pathname.match(/\/weapi\/v1\/album\/([^/]+)\/?$/)
       if (albumMatch) {
         return buildMockAnswer({ code: 200, album: { id: albumMatch[1] } })
@@ -66,7 +68,7 @@ const getMockAnswer = (url, data = {}) => {
       }
     }
     if (
-      hostname === 'interface3.music.163.com' &&
+      hostname === INTERFACE3_HOST &&
       pathname.includes('/eapi/song/enhance/player/url')
     ) {
       return buildMockAnswer({
@@ -75,8 +77,7 @@ const getMockAnswer = (url, data = {}) => {
       })
     }
   } catch (e) {
-    const safeUrl = url.split('?')[0]
-    console.warn('[mock]', { url: safeUrl, error: e.message })
+    console.warn('[mock]', { url: '[invalid]', error: e.message })
   }
   return null
 }
