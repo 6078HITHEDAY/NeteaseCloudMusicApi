@@ -1,6 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 
+process.env.NCM_API_MOCK = 'true'
+
 let app
 before(() => {
   app = require('./app.js')

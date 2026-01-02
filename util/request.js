@@ -6,7 +6,98 @@ const http = require('http')
 const https = require('https')
 const tunnel = require('tunnel')
 const qs = require('url')
-// request.debug = true // 开启可看到更详细信息
+const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
+const mockDebugEnabled = process.env.NCM_API_MOCK_DEBUG === 'true'
+const MUSIC_HOST = 'music.163.com'
+const INTERFACE3_HOST = 'interface3.music.163.com'
+const ALBUM_PATH_REGEX = /\/weapi\/v1\/album\/([^/]+)\/?$/
+const COMMENT_PATH_REGEX = /\/weapi\/v1\/resource\/comments\/R_AL_3_(\d+)/
+const LOGIN_PATH_REGEX = /\/weapi\/login\/cellphone/
+const LYRIC_PATH_REGEX = /\/api\/song\/lyric/
+const SEARCH_PATH_REGEX = /\/weapi\/search\/get/
+const SONG_URL_PATH_REGEX = /\/eapi\/song\/enhance\/player\/url/
+
+/**
+ * Build a mock response shaped like the normal request answer.
+ * @param {object} body mock payload to return
+ * @returns {{status:number, body:object, cookie:Array}}
+ */
+const buildMockAnswer = (body = {}) => {
+  return {
+    status: body.code || 200,
+    body,
+    cookie: [],
+  }
+}
+
+const debugMockMatch = (tag) => {
+  if (mockDebugEnabled) console.debug('[mock] returning stub for', tag)
+}
+
+/**
+ * Return a mocked answer for known URLs when mock mode is enabled.
+ */
+const getMockAnswer = (url, data = {}) => {
+  if (!mockModeEnabled) return null
+  if (typeof url !== 'string') return null
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (hostname === MUSIC_HOST) {
+      const albumMatch = pathname.match(ALBUM_PATH_REGEX)
+      if (albumMatch) {
+        debugMockMatch('album')
+        return buildMockAnswer({ code: 200, album: { id: albumMatch[1] } })
+      }
+      const commentMatch = pathname.match(COMMENT_PATH_REGEX)
+      if (commentMatch) {
+        debugMockMatch('comment_album')
+        return buildMockAnswer({
+          code: 200,
+          comments: [],
+          total: 0,
+          id: commentMatch[1],
+        })
+      }
+      if (LOGIN_PATH_REGEX.test(pathname)) {
+        debugMockMatch('login_cellphone')
+        return buildMockAnswer({
+          code: 200,
+          profile: { nickname: 'mock-user' },
+        })
+      }
+      if (LYRIC_PATH_REGEX.test(pathname)) {
+        debugMockMatch('lyric')
+        return buildMockAnswer({
+          code: 200,
+          lrc: { lyric: '[00:00.00] mock lyric' },
+        })
+      }
+      if (SEARCH_PATH_REGEX.test(pathname)) {
+        debugMockMatch('search')
+        const keyword = data.s || ''
+        return buildMockAnswer({
+          code: 200,
+          result: { songs: [{ name: keyword }], songCount: 1 },
+        })
+      }
+    }
+    if (
+      hostname === INTERFACE3_HOST &&
+      SONG_URL_PATH_REGEX.test(pathname)
+    ) {
+      debugMockMatch('song_url')
+      return buildMockAnswer({
+        code: 200,
+        data: [{ url: 'https://example.com/mock-song' }],
+      })
+    }
+  } catch (e) {
+    const safeUrl = typeof url === 'string' ? url.split('?')[0] : '[invalid]'
+    console.warn('[mock]', { url: safeUrl, error: e.message })
+  }
+  return null
+}
+// request.debug = true // enable to view more detailed information
 
 const chooseUserAgent = (ua = false) => {
   const userAgentList = {
@@ -33,7 +124,7 @@ const chooseUserAgent = (ua = false) => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.30 Safari/537.36',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/13.10586',
-      // Linux 就算了
+      // Linux (not needed here)
     ],
   }
   let realUserAgentList =
@@ -43,6 +134,8 @@ const chooseUserAgent = (ua = false) => {
     : ua
 }
 const createRequest = (method, url, data, options) => {
+  const mockAnswer = getMockAnswer(url, data)
+  if (mockAnswer) return Promise.resolve(mockAnswer)
   return new Promise((resolve, reject) => {
     let headers = { 'User-Agent': chooseUserAgent(options.ua) }
     if (method.toUpperCase() === 'POST')
@@ -84,13 +177,13 @@ const createRequest = (method, url, data, options) => {
       const cookie = options.cookie || {}
       const csrfToken = cookie['__csrf'] || ''
       const header = {
-        osver: cookie.osver, //系统版本
-        deviceId: cookie.deviceId, //encrypt.base64.encode(imei + '\t02:00:00:00:00:00\t5106025eb79a5247\t70ffbaac7')
-        appver: cookie.appver || '8.0.0', // app版本
-        versioncode: cookie.versioncode || '140', //版本号
-        mobilename: cookie.mobilename, //设备model
+        osver: cookie.osver, // system version
+        deviceId: cookie.deviceId, // encrypt.base64.encode(imei + '\t02:00:00:00:00:00\t5106025eb79a5247\t70ffbaac7')
+        appver: cookie.appver || '8.0.0', // app version
+        versioncode: cookie.versioncode || '140', // version code
+        mobilename: cookie.mobilename, // device model
         buildver: cookie.buildver || Date.now().toString().substr(0, 10),
-        resolution: cookie.resolution || '1920x1080', //设备分辨率
+        resolution: cookie.resolution || '1920x1080', // device resolution
         __csrf: csrfToken,
         os: cookie.os || 'android',
         channel: cookie.channel,
