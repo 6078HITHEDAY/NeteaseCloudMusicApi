@@ -24,7 +24,7 @@ const buildMockAnswer = (body = {}) => {
 /**
  * Return a mocked answer for known URLs when mock mode is enabled.
  */
-const getMockAnswer = (method, url, data = {}) => {
+const getMockAnswer = (url, data = {}) => {
   if (!mockModeEnabled) return null
   if (typeof url !== 'string') return null
   try {
@@ -76,7 +76,7 @@ const getMockAnswer = (method, url, data = {}) => {
     }
   } catch (e) {
     const safeUrl = url.split('?')[0]
-    console.warn('[mock] failed to parse request url', safeUrl, e.message)
+    console.warn('[mock]', { url: safeUrl, error: e.message })
   }
   return null
 }
@@ -117,7 +117,7 @@ const chooseUserAgent = (ua = false) => {
     : ua
 }
 const createRequest = (method, url, data, options) => {
-  const mockAnswer = getMockAnswer(method, url, data)
+  const mockAnswer = getMockAnswer(url, data)
   if (mockAnswer) return Promise.resolve(mockAnswer)
   return new Promise((resolve, reject) => {
     let headers = { 'User-Agent': chooseUserAgent(options.ua) }
