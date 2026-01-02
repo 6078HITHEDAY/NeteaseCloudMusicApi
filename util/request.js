@@ -6,6 +6,63 @@ const http = require('http')
 const https = require('https')
 const tunnel = require('tunnel')
 const qs = require('url')
+const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
+
+const buildMockAnswer = (body = {}) => {
+  return {
+    status: body.code || 200,
+    body,
+    cookie: [],
+  }
+}
+
+const getMockAnswer = (method, url, data = {}) => {
+  if (!mockModeEnabled) return null
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (hostname === 'music.163.com') {
+      if (pathname.startsWith('/weapi/v1/album/')) {
+        const id = pathname.split('/').pop()
+        return buildMockAnswer({ code: 200, album: { id } })
+      }
+      if (pathname.includes('/weapi/v1/resource/comments/R_AL_3_')) {
+        const id = pathname.split('_').pop()
+        return buildMockAnswer({ code: 200, comments: [], total: 0, id })
+      }
+      if (pathname.includes('/weapi/login/cellphone')) {
+        return buildMockAnswer({
+          code: 200,
+          profile: { nickname: 'mock-user' },
+        })
+      }
+      if (pathname.includes('/api/song/lyric')) {
+        return buildMockAnswer({
+          code: 200,
+          lrc: { lyric: '[00:00.00] mock lyric' },
+        })
+      }
+      if (pathname.includes('/weapi/search/get')) {
+        const keyword = data.s || ''
+        return buildMockAnswer({
+          code: 200,
+          result: { songs: [{ name: keyword }], songCount: 1 },
+        })
+      }
+    }
+    if (
+      hostname === 'interface3.music.163.com' &&
+      pathname.includes('/eapi/song/enhance/player/url')
+    ) {
+      return buildMockAnswer({
+        code: 200,
+        data: [{ url: 'http://mock.song/url' }],
+      })
+    }
+  } catch (e) {
+    // ignore parse error and fallback to real request
+  }
+  return null
+}
 // request.debug = true // 开启可看到更详细信息
 
 const chooseUserAgent = (ua = false) => {
@@ -43,6 +100,8 @@ const chooseUserAgent = (ua = false) => {
     : ua
 }
 const createRequest = (method, url, data, options) => {
+  const mockAnswer = getMockAnswer(method, url, data)
+  if (mockAnswer) return Promise.resolve(mockAnswer)
   return new Promise((resolve, reject) => {
     let headers = { 'User-Agent': chooseUserAgent(options.ua) }
     if (method.toUpperCase() === 'POST')
