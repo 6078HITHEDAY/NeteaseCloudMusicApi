@@ -21,13 +21,20 @@ const getMockAnswer = (method, url, data = {}) => {
   try {
     const { hostname, pathname } = new URL(url)
     if (hostname === 'music.163.com') {
-      if (pathname.startsWith('/weapi/v1/album/')) {
-        const id = pathname.split('/').pop()
-        return buildMockAnswer({ code: 200, album: { id } })
+      const albumMatch = pathname.match(/\/weapi\/v1\/album\/([^/]+)\/?$/)
+      if (albumMatch) {
+        return buildMockAnswer({ code: 200, album: { id: albumMatch[1] } })
       }
-      if (pathname.includes('/weapi/v1/resource/comments/R_AL_3_')) {
-        const id = pathname.split('_').pop()
-        return buildMockAnswer({ code: 200, comments: [], total: 0, id })
+      const commentMatch = pathname.match(
+        /\/weapi\/v1\/resource\/comments\/R_AL_3_(\d+)/,
+      )
+      if (commentMatch) {
+        return buildMockAnswer({
+          code: 200,
+          comments: [],
+          total: 0,
+          id: commentMatch[1],
+        })
       }
       if (pathname.includes('/weapi/login/cellphone')) {
         return buildMockAnswer({
@@ -55,11 +62,11 @@ const getMockAnswer = (method, url, data = {}) => {
     ) {
       return buildMockAnswer({
         code: 200,
-        data: [{ url: 'http://mock.song/url' }],
+        data: [{ url: 'https://mock.song/url' }],
       })
     }
   } catch (e) {
-    // ignore parse error and fallback to real request
+    console.warn('[mock] failed to parse request url', url, e.message)
   }
   return null
 }
