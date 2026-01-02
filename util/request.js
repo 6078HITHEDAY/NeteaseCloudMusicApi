@@ -8,6 +8,11 @@ const tunnel = require('tunnel')
 const qs = require('url')
 const mockModeEnabled = process.env.NCM_API_MOCK === 'true'
 
+/**
+ * Build a mock response shaped like the normal request answer.
+ * @param {object} body mock payload to return
+ * @returns {{status:number, body:object, cookie:Array}}
+ */
 const buildMockAnswer = (body = {}) => {
   return {
     status: body.code || 200,
@@ -16,8 +21,12 @@ const buildMockAnswer = (body = {}) => {
   }
 }
 
+/**
+ * Return a mocked answer for known URLs when mock mode is enabled.
+ */
 const getMockAnswer = (method, url, data = {}) => {
   if (!mockModeEnabled) return null
+  if (typeof url !== 'string') return null
   try {
     const { hostname, pathname } = new URL(url)
     if (hostname === 'music.163.com') {
@@ -66,7 +75,8 @@ const getMockAnswer = (method, url, data = {}) => {
       })
     }
   } catch (e) {
-    console.warn('[mock] failed to parse request url', e.message)
+    const safeUrl = url.split('?')[0]
+    console.warn('[mock] failed to parse request url', safeUrl, e.message)
   }
   return null
 }
